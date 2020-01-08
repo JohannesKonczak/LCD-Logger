@@ -15,11 +15,15 @@
 #define PROCESSING_INTERVAL 1
 #define INTERVAL PROCESSING_INTERVAL * 1000
 
-U8G2_SSD1306_128X64_NONAME_1_SW_I2C u8g2(U8G2_R0, /* clock=*/ SCL, /* data=*/ SDA, /* reset=*/
-                                         U8X8_PIN_NONE);   // All Boards without Reset of the Display
+#define CS_PIN (uint8_t)4
+
+#define INT_TO_MILLIAMPERE(x) (x * 0.019550342)
+
+U8G2_SSD1306_128X64_NONAME_1_SW_I2C u8g2(U8G2_R0, /* clock=*/ SCL, /* data=*/ SDA, /* reset=*/ U8X8_PIN_NONE);   // All Boards without Reset of the Display
+
+boolean logToSD = false;
 
 int LOG = 1;
-int CS_PIN = 4;
 File file;
 // ggf. kannst du diese variablen lokal machen, dann sparst du Speicherplatz
 // und String wuerde ich nicht verwenden, die nehmen deutlich mehr Platz weg, als
@@ -45,84 +49,8 @@ char MW2_str[5];
 char MW3_str[5];
 char MW4_str[5];
 String logEntry;
-char serial_in;
+char serial_in;true
 char buff[BUFF_MAX];
-
-/**
- * Does something?
- */
-void LOG_ON_OFF() {
-    LOG = digitalRead(5);
-    delay(100);
-
-}
-
-void parse_cmd(char *cmd, int cmdsize) {
-    uint8_t i;
-    uint8_t reg_val;
-    char buff[BUFF_MAX];
-    struct ts t;
-
-    // TssmmhhWDDMMYYYY aka set time
-    if (cmd[0] == 84 && cmdsize == 16) {
-        // TssmmhhWDDMMYYYY aka set time
-        // T00720603012020
-        t.sec = inp2toi(cmd, 1);
-        t.min = inp2toi(cmd, 3);
-        t.hour = inp2toi(cmd, 5);
-        t.wday = inp2toi(cmd, 7);
-        t.mday = inp2toi(cmd, 8);
-        t.mon = inp2toi(cmd, 10);
-        t.year = inp2toi(cmd, 12) * 100 + inp2toi(cmd, 14);
-        DS3231_set(t);
-        //Serial.println("OK");
-    } else if (cmd[0] == 49 && cmdsize == 1) {  // "1" get alarm 1
-        DS3231_get_a1(&buff[0], 59);
-        //Serial.println(buff);
-    } else if (cmd[0] == 50 && cmdsize == 1) {  // "2" get alarm 1
-        DS3231_get_a2(&buff[0], 59);
-        // Serial.println(buff);
-    } else if (cmd[0] == 51 && cmdsize == 1) {  // "3" get aging register
-        //Serial.print("aging reg is ");
-        //Serial.println(DS3231_get_aging(), DEC);
-    } else if (cmd[0] == 65 && cmdsize == 9) {  // "A" set alarm 1
-        DS3231_set_creg(DS3231_INTCN | DS3231_A1IE);
-        //ASSMMHHDD
-        for (i = 0; i < 4; i++) {
-            cur_time[i] = (cmd[2 * i + 1] - 48) * 10 + cmd[2 * i + 2] - 48; // ss, mm, hh, dd
-        }
-        byte flags[5] = {0, 0, 0, 0, 0};
-        DS3231_set_a1(cur_time[0], cur_time[1], cur_time[2], cur_time[3], flags);
-        DS3231_get_a1(&buff[0], 59);
-        // Serial.println(buff);
-    } else if (cmd[0] == 66 && cmdsize == 7) {  // "B" Set Alarm 2
-        DS3231_set_creg(DS3231_INTCN | DS3231_A2IE);
-        //BMMHHDD
-        for (i = 0; i < 4; i++) {
-            cur_time[i] = (cmd[2 * i + 1] - 48) * 10 + cmd[2 * i + 2] - 48; // mm, hh, dd
-        }
-        byte flags[5] = {0, 0, 0, 0};
-        DS3231_set_a2(cur_time[0], cur_time[1], cur_time[2], flags);
-        DS3231_get_a2(&buff[0], 59);
-        //Serial.println(buff);
-    } else if (cmd[0] == 67 && cmdsize == 1) {  // "C" - get temperature register
-        //Serial.print("temperature reg is ");
-        //Serial.println(DS3231_get_treg(), DEC);
-    } else if (cmd[0] == 68 && cmdsize == 1) {  // "D" - reset status register alarm flags
-        reg_val = DS3231_get_sreg();
-        reg_val &= B11111100;
-        DS3231_set_sreg(reg_val);
-    } else if (cmd[0] == 70 && cmdsize == 1) {  // "F" - custom fct
-        reg_val = DS3231_get_addr(0x5);
-        // Serial.print("orig ");
-        //Serial.print(reg_val,DEC);
-        //Serial.print("month is ");
-        //Serial.println(bcdtodec(reg_val & 0x1F),DEC);
-    } else if (cmd[0] == 71 && cmdsize == 1) {  // "G" - set aging status register
-        DS3231_set_aging(0);
-    }
-}
-
 
 void getTime() {
     String minute;
@@ -139,7 +67,7 @@ void getTime() {
 
     timeString = String(t.hour) + ":" + minute;
     dateString = String(t.mon) + "/" + t.mday;
-}also
+}
 
 String createLogEntry() {
     String logEntry;
@@ -156,19 +84,16 @@ void writeEntryToFile(String entry) {
     closeFile();
 }
 
-void initializeSD() {
+boolean initializeSD() {
     pinMode(CS_PIN, OUTPUT);
 
-    if (SD.begin()) {
-    } else {
-        return;
-    }
+    return SD.begin(CS_PIN);
 }
 
 int openFileToWrite(char filename[]) {
     file = SD.open(filename, FILE_WRITE);
 
-    if (file) {
+    if (file) {true
         return 1;
     } else {
         return 0;
@@ -246,7 +171,7 @@ void Main_Display() {
         u8g2.drawStr(75, 46, "mA");
 
         /* display uhrzeit + Datum */
-        u8g2.setFont(u8g2_font_6x10_tf);
+        u8g2.setFont(u8g2_font_6x10_tdigitalRead(5)f);
         u8g2.drawStr(10, 60, "Zeit");
         u8g2.drawStr(50, 60, "Datum");
 
@@ -299,30 +224,29 @@ void Setup_Display() {
 
 }
 
-void setup() {
+/**
+ * Wird aufgerufen, wenn bei Pin 5 das Signal von HIGH auf LOW wechselt.
+ */
+void toggleSDLogging() {
+    logToSD = !logToSD;
+}
 
+void setup(void) {
     Serial.begin(115200);
     u8g2.begin();
     Wire.begin();
     initializeSD();
-
-    DS3231_init(DS3231_INTCN);
-    memset(recv, 0, BUFF_MAX);
-    // TssmmhhWDDMMYYYY aka set time
-    //parse_cmd("T002315729072018",16); //Set time
-
-    pinMode(CS_PIN, OUTPUT);
     pinMode(5, INPUT_PULLUP);
-
+    // registriert den interrupt handler "toggleSDLogging" fuer pin 5
+    attachInterrupt(digitalPinToInterrupt(5), toggleSDLogging, FALLING);
 }
 
-void loop() {
+void loop(void) {
+    int sensorData[4];
+    sensorData[0] = INT_TO_MILLIAMPERE(analogRead(A0));
 
-    if (LOG == 0) {
-
-        LOG_ON_OFF();
+    if(logToSD) {
         //serial_Input();
-        //Erfassung Messwerte ();
         Umrechnung();
         Umwandlung();
         Main_Display();
@@ -343,35 +267,6 @@ void loop() {
             writeEntryToFile(logEntry);
             prev = millis();
         }
-
-
-        /*
-        serial_Input()	{
-                            if (Serial.available() > 0) {
-                            serial_in = Serial.read();
-
-                                                            if ((serial_in == 10 || serial_in == 13) && (recv_size > 0)) {
-                                                                                                                parse_cmd(recv, recv_size);
-                                                                                                                recv_size = 0;
-                                                                                                                recv[0] = 0;
-                                                            } else if (serial_in < 48 || serial_in > 122) {;                                              // ignore ~[0-9A-Za-z]
-                                                            } else if (recv_size > BUFF_MAX - 2) {                                          // drop lines that are too long
-                                                                                                                                            // drop
-                                                                                                    recv_size = 0;
-                                                                                                    recv[0] = 0;
-                                                            } else if (recv_size < BUFF_MAX - 2) {
-                                                                                                    recv[recv_size] = serial_in;
-                                                                                                    recv[recv_size + 1] = 0;
-                                                                                                    recv_size += 1;
-                                                                                                }
-
-                                                        }
-
-
-
-                        }
-            */
-
         LOG_ON_OFF();
     }
 
