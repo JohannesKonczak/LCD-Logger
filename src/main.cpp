@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include <DS3231.h>
+#include <RtcDS3231.h>
 #include <config.h>
 #include <Wire.h>
 #include <SD.h>
@@ -17,11 +17,14 @@
 
 #define CS_PIN (uint8_t)4
 
-#define INT_TO_MILLIAMPERE(x) (x * 0.019550342)
+#define INT_TO_MIL_AMPS(x) (x * 0.019550342)
 
 U8G2_SSD1306_128X64_NONAME_1_SW_I2C u8g2(U8G2_R0, /* clock=*/ SCL, /* data=*/ SDA, /* reset=*/ U8X8_PIN_NONE);   // All Boards without Reset of the Display
 
+// status, ob auf sd karte geschrieben werden soll
 boolean logToSD = false;
+// zeit (in ms seit programmstart) zu der der letzte logeintrag erfolgt ist
+unsigned long lastWrite = 0;
 
 int LOG = 1;
 File file;
@@ -36,20 +39,8 @@ uint8_t cur_time[8];
 char recv[BUFF_MAX];
 unsigned int recv_size = 0;
 unsigned long prev, interval = 1000;
-int In1 = 0;
-int In2 = 0;
-int In3 = 0;
-int In4 = 0;
-double MW1 = 0;
-double MW2 = 0;
-double MW3 = 0;
-double MW4 = 0;
-char MW1_str[5];
-char MW2_str[5];
-char MW3_str[5];
-char MW4_str[5];
 String logEntry;
-char serial_in;true
+char serial_in;
 char buff[BUFF_MAX];
 
 void getTime() {
@@ -115,33 +106,15 @@ void closeFile() {
     }
 }
 
-void Erfassung_Messwerte() {
-    In1 = analogRead(A0);
-    In2 = analogRead(A1);
-    In3 = analogRead(A2);
-    In4 = analogRead(A3);
-
-}
-
-void Umrechnung() {
-    /* Umrechnung auf mA */
-    MW1 = (In1 * 0.019550342);
-    MW2 = (In2 * 0.019550342);
-    MW3 = (In3 * 0.019550342);
-    MW4 = (In4 * 0.019550342);
-
-}
-
 void Umwandlung() {
     /* convert to a string  */
 
-    dtostrf(MW1, 4, 1, MW1_str);
+
     dtostrf(MW2, 4, 1, MW2_str);
     dtostrf(MW3, 4, 1, MW3_str);
     dtostrf(MW4, 4, 1, MW4_str);
 
 }
-
 
 void Main_Display() {
     u8g2.firstPage();
@@ -231,52 +204,53 @@ void toggleSDLogging() {
     logToSD = !logToSD;
 }
 
-void setup(void) {
+char* doubleToLogMessage(double value) {
+    char result[5];
+    dtostrf(value, 4, 1, result);
+    return result;
+}
+
+void setup() {
     Serial.begin(115200);
     u8g2.begin();
     Wire.begin();
     initializeSD();
     pinMode(5, INPUT_PULLUP);
-    // registriert den interrupt handler "toggleSDLogging" fuer pin 5
+    // registriert den interrupt handler "toggleSDLogging" für pin 5
     attachInterrupt(digitalPinToInterrupt(5), toggleSDLogging, FALLING);
 }
 
-void loop(void) {
-    int sensorData[4];
-    sensorData[0] = INT_TO_MILLIAMPERE(analogRead(A0));
+void loop() {
+    double sensorData[4];
+    sensorData[0] = INT_TO_MIL_AMPS(analogRead(A0));
+    sensorData[1] = INT_TO_MIL_AMPS(analogRead(A3));
+    // und so weiter, die pins sind allerdings komisch benannt?
 
     if(logToSD) {
-        //serial_Input();
-        Umrechnung();
-        Umwandlung();
-        Main_Display();
-        //if () {closeFile();};
+        // legt 4 addressen zu strings an
+        char* dataString[4];
 
-        In1 = random(1024);
-        In2 = random(1024);
-        In3 = random(1024);
-        In4 = random(1024);
-
-
-
-
-        // Log data once in a while
-        if ((millis() - prev > interval) && (Serial.available() <= 0)) {
-            getTime();
-            logEntry = createLogEntry();
-            writeEntryToFile(logEntry);
-            prev = millis();
+        // generiert den string und speichert dessen addresse
+        // für jeden messwert
+        for(int i = 0; i < 4; i++) {
+            dataString[i] = doubleToLogMessage(sensorData[i]);
         }
-        LOG_ON_OFF();
+
+        // TODO: update display
+
+
+        if((millis() - lastWrite > INTERVAL)) {
+            lastWrite = millis();
+            // TODO: save log entry
+        }
+    } else {
+
     }
 
-
     if (LOG == 1) {
-        LOG_ON_OFF();
         closeFile();
         getTime();
         Setup_Display();
-        LOG_ON_OFF();
         delay(1000);
 
     }
