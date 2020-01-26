@@ -5,14 +5,15 @@
 #include <SD.h>
 #include <U8g2lib.h>
 
+#include "logfile.h"
+
 #ifdef U8X8_HAVE_HW_SPI
 #include <SPI.h>
 #endif
-#ifdef U8X8_HAVE_HW_I2C
-#endif
+
 #define BUFF_MAX 128
 
-#define PROCESSING_INTERVAL 1
+#define PROCESSING_INTERVAL 1 // Log-Intervall in Sekunden
 #define INTERVAL PROCESSING_INTERVAL * 1000
 
 #define CS_PIN (uint8_t)4
@@ -22,24 +23,14 @@
 U8G2_SSD1306_128X64_NONAME_1_SW_I2C u8g2(U8G2_R0, /* clock=*/ SCL, /* data=*/ SDA, /* reset=*/ U8X8_PIN_NONE);   // All Boards without Reset of the Display
 
 // status, ob auf sd karte geschrieben werden soll
-boolean logToSD = false;
+bool logToSD = false;
 // zeit (in ms seit programmstart) zu der der letzte logeintrag erfolgt ist
 unsigned long lastWrite = 0;
 
-int LOG = 1;
-File file;
-// ggf. kannst du diese variablen lokal machen, dann sparst du Speicherplatz
-// und String wuerde ich nicht verwenden, die nehmen deutlich mehr Platz weg, als
-// char temperature[64]; Natuerlich musst du dafuer dann die Laenge vorher kennen...
-String temperature;
-String timeString;
-String dateString;
-int entryId = 0;
 uint8_t cur_time[8];
 char recv[BUFF_MAX];
 unsigned int recv_size = 0;
 unsigned long prev, interval = 1000;
-String logEntry;
 char serial_in;
 char buff[BUFF_MAX];
 
@@ -61,49 +52,10 @@ void getTime() {
 }
 
 String createLogEntry() {
-    String logEntry;
-    entryId++;
+    char *logEntry = (char*)malloc(256*sizeof(char));
     logEntry = String(entryId) + "," + dateString + "," + timeString + "," + MW1_str + "," + MW2_str + "," + MW3_str +
                "," + MW4_str;
     return logEntry;
-}
-
-void writeEntryToFile(String entry) {
-    openFileToWrite("log.txt");
-    Serial.println(entry);
-    writeToFile(entry);
-    closeFile();
-}
-
-boolean initializeSD() {
-    pinMode(CS_PIN, OUTPUT);
-
-    return SD.begin(CS_PIN);
-}
-
-int openFileToWrite(char filename[]) {
-    file = SD.open(filename, FILE_WRITE);
-
-    if (file) {true
-        return 1;
-    } else {
-        return 0;
-    }
-}
-
-int writeToFile(String text) {
-    if (file) {
-        file.println(text);
-        return 1;
-    } else {
-        return 0;
-    }
-}
-
-void closeFile() {
-    if (file) {
-        file.close();
-    }
 }
 
 void Umwandlung() {
@@ -205,7 +157,7 @@ void toggleSDLogging() {
 }
 
 char* doubleToLogMessage(double value) {
-    char result[5];
+    char *result = (char*) malloc(5*sizeof(char));
     dtostrf(value, 4, 1, result);
     return result;
 }
@@ -214,7 +166,9 @@ void setup() {
     Serial.begin(115200);
     u8g2.begin();
     Wire.begin();
-    initializeSD();
+    if(!initializeLogfile(CS_PIN)) {
+        // TODO error
+    }
     pinMode(5, INPUT_PULLUP);
     // registriert den interrupt handler "toggleSDLogging" für pin 5
     attachInterrupt(digitalPinToInterrupt(5), toggleSDLogging, FALLING);
@@ -252,6 +206,5 @@ void loop() {
         getTime();
         Setup_Display();
         delay(1000);
-
     }
 } // End loop
