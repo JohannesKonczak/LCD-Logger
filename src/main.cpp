@@ -18,7 +18,7 @@
 
 #define CS_PIN (uint8_t)4
 
-#define INT_TO_MIL_AMPS(x) (x * 0.019550342)
+#define INT_TO_MIL_AMPS(x) ((x) * 0.019550342)
 
 U8G2_SSD1306_128X64_NONAME_1_SW_I2C u8g2(U8G2_R0, /* clock=*/ SCL, /* data=*/ SDA, /* reset=*/ U8X8_PIN_NONE);   // All Boards without Reset of the Display
 
@@ -26,47 +26,6 @@ U8G2_SSD1306_128X64_NONAME_1_SW_I2C u8g2(U8G2_R0, /* clock=*/ SCL, /* data=*/ SD
 bool logToSD = false;
 // zeit (in ms seit programmstart) zu der der letzte logeintrag erfolgt ist
 unsigned long lastWrite = 0;
-
-uint8_t cur_time[8];
-char recv[BUFF_MAX];
-unsigned int recv_size = 0;
-unsigned long prev, interval = 1000;
-char serial_in;
-char buff[BUFF_MAX];
-
-void getTime() {
-    String minute;
-    String hour;
-    struct ts t;
-
-    DS3231_get(&t);
-
-    if (t.min < 10) {
-        minute = "0" + String(t.min);
-    } else {
-        minute = String(t.min);
-    }
-
-    timeString = String(t.hour) + ":" + minute;
-    dateString = String(t.mon) + "/" + t.mday;
-}
-
-String createLogEntry() {
-    char *logEntry = (char*)malloc(256*sizeof(char));
-    logEntry = String(entryId) + "," + dateString + "," + timeString + "," + MW1_str + "," + MW2_str + "," + MW3_str +
-               "," + MW4_str;
-    return logEntry;
-}
-
-void Umwandlung() {
-    /* convert to a string  */
-
-
-    dtostrf(MW2, 4, 1, MW2_str);
-    dtostrf(MW3, 4, 1, MW3_str);
-    dtostrf(MW4, 4, 1, MW4_str);
-
-}
 
 void Main_Display() {
     u8g2.firstPage();
@@ -180,31 +139,25 @@ void loop() {
     sensorData[1] = INT_TO_MIL_AMPS(analogRead(A3));
     // und so weiter, die pins sind allerdings komisch benannt?
 
+    // legt 4 addressen zu strings an
+    char* dataString[4];
+
+    // generiert den string und speichert dessen addresse
+    // für jeden messwert
+    for(int i = 0; i < 4; i++) {
+        dataString[i] = doubleToLogMessage(sensorData[i]);
+    }
+
+    // schreiben auf sd karte
     if(logToSD) {
-        // legt 4 addressen zu strings an
-        char* dataString[4];
-
-        // generiert den string und speichert dessen addresse
-        // für jeden messwert
-        for(int i = 0; i < 4; i++) {
-            dataString[i] = doubleToLogMessage(sensorData[i]);
-        }
-
-        // TODO: update display
-
-
         if((millis() - lastWrite > INTERVAL)) {
             lastWrite = millis();
-            // TODO: save log entry
+            char *fullMessage = (char*) malloc(5*4*sizeof(char));
+            sprintf(fullMessage, "%s;%s;%s;%s", dataString[0], dataString[1], dataString[2], dataString[3]);
+            writeLogEntry(fullMessage);
         }
-    } else {
-
     }
 
-    if (LOG == 1) {
-        closeFile();
-        getTime();
-        Setup_Display();
-        delay(1000);
-    }
-} // End loop
+    // anzeige der sensordaten auf display
+    displaySensorData();
+}

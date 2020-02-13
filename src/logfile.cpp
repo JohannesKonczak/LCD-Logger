@@ -1,7 +1,3 @@
-//
-// Created by alex on 26/01/2020.
-//
-
 #include "logfile.h"
 #include <SPI.h>
 #include <SD.h>

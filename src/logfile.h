@@ -1,7 +1,3 @@
-//
-// Created by alex on 26/01/2020.
-//
-
 #ifndef LCD_LOGGER_LOGFILE_H
 #define LCD_LOGGER_LOGFILE_H
 
