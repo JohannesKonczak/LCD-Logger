@@ -13,6 +13,7 @@
 #define INPUT_3 15
 #define INPUT_4 18
 
+#define LOG_TOGGLE_PIN 32
 #define CS_PIN (uint8_t)4
 // rechnet sensorwert in mA um
 #define INT_TO_MIL_AMPS(x) ((x) * 0.006103515625)
@@ -47,9 +48,9 @@ void setup() {
     if(!initializeLogfile(CS_PIN)) {
         // TODO error
     }
-    pinMode(5, INPUT_PULLUP);
-    // registriert den interrupt handler "toggleSDLogging" für pin 5
-    attachInterrupt(digitalPinToInterrupt(5), toggleSDLogging, FALLING);
+    pinMode(LOG_TOGGLE_PIN, INPUT_PULLUP);
+    // registriert den interrupt handler "toggleSDLogging" für pin 32
+    attachInterrupt(digitalPinToInterrupt(LOG_TOGGLE_PIN), toggleSDLogging, FALLING);
 }
 
 void loop() {
