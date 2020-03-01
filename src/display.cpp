@@ -33,7 +33,7 @@ void displaySensorData(char **sensorData, bool isLogging) {
             y += 12;
         }
 
-        u8g2.drawStr(80,22,isLogging ? "Log ON" : "Log OFF");
+        u8g2.drawStr(10,58,isLogging ? "Log ON" : "Log OFF");
 
         /* display uhrzeit + Datum */
 //        u8g2.drawStr(10, 60, "Zeit");
