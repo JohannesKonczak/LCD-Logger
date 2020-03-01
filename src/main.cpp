@@ -15,7 +15,7 @@
 
 #define CS_PIN (uint8_t)4
 // rechnet sensorwert in mA um
-#define INT_TO_MIL_AMPS(x) ((x) * 0.019550342)
+#define INT_TO_MIL_AMPS(x) ((x) * 0.006103515625)
 
 // status, ob auf sd karte geschrieben werden soll
 bool logToSD = false;
@@ -41,6 +41,7 @@ char* doubleToLogMessage(double value) {
 }
 
 void setup() {
+    analogReadResolution(12);
     Serial.begin(115200);
     initializeDisplay();
     if(!initializeLogfile(CS_PIN)) {
