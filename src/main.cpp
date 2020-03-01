@@ -43,7 +43,6 @@ char* doubleToLogMessage(double value) {
 void setup() {
     Serial.begin(115200);
     initializeDisplay();
-    Wire.begin();
     if(!initializeLogfile(CS_PIN)) {
         // TODO error
     }
@@ -67,6 +66,7 @@ void loop() {
     // für jeden messwert
     for(int i = 0; i < 4; i++) {
         dataString[i] = doubleToLogMessage(sensorData[i]);
+        Serial.println(dataString[i]);
     }
 
     // schreiben auf sd karte
@@ -80,5 +80,7 @@ void loop() {
     }
 
     // anzeige der sensordaten auf display
+    Serial.println("Displaying...");
     displaySensorData(dataString, logToSD);
+    delay(3000);
 }
