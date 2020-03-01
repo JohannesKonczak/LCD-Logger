@@ -8,10 +8,10 @@
 #define INTERVAL PROCESSING_INTERVAL * 1000
 
 // Hier die Analog Pins eintragen, an denen die Messwerte erhoben werden.
-#define INPUT_1 A0
-#define INPUT_2 A0
-#define INPUT_3 A0
-#define INPUT_4 A0
+#define INPUT_1 16
+#define INPUT_2 17
+#define INPUT_3 15
+#define INPUT_4 18
 
 #define CS_PIN (uint8_t)4
 // rechnet sensorwert in mA um
