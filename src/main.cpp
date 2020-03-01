@@ -83,5 +83,4 @@ void loop() {
     // anzeige der sensordaten auf display
     Serial.println("Displaying...");
     displaySensorData(dataString, logToSD);
-    delay(3000);
 }
