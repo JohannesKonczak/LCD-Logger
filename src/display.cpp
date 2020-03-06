@@ -17,7 +17,7 @@ void initializeDisplay() {
  * @param sensorData array mit strings, die sensorwerte repräsentieren. Muss 4 werte enthalten!
  * @param isLogging einstellung, ob auf SD karte geschrieben wird oder nicht.
  */
-void displaySensorData(char **sensorData, bool isLogging) {
+void displaySensorData(char **sensorData, bool isLogging, bool sdStatus) {
     u8g2.firstPage();
     do {
         u8g2.setFont(u8g2_font_6x10_tf);
@@ -34,6 +34,7 @@ void displaySensorData(char **sensorData, bool isLogging) {
         }
 
         u8g2.drawStr(10,58,isLogging ? "Log ON" : "Log OFF");
+        u8g2.drawStr(64, 58, sdStatus ? "SD OK" : "SD BAD");
 
         /* display uhrzeit + Datum */
 //        u8g2.drawStr(10, 60, "Zeit");

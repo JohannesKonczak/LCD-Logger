@@ -8,18 +8,19 @@
 #define INTERVAL PROCESSING_INTERVAL * 1000
 
 // Hier die Analog Pins eintragen, an denen die Messwerte erhoben werden.
-#define INPUT_1 16
-#define INPUT_2 17
+#define INPUT_1 0
+#define INPUT_2 0
 #define INPUT_3 15
-#define INPUT_4 18
+#define INPUT_4 0
 
 #define LOG_TOGGLE_PIN 32
-#define CS_PIN (uint8_t)4
+#define CS_PIN (uint8_t)5
 // rechnet sensorwert in mA um
 #define INT_TO_MIL_AMPS(x) ((x) * 0.006103515625)
 
 // status, ob auf sd karte geschrieben werden soll
 bool logToSD = false;
+bool sdStatus = false;
 // zeit (in ms seit programmstart) zu der der letzte logeintrag erfolgt ist
 unsigned long lastWrite = 0;
 
@@ -45,8 +46,9 @@ void setup() {
     analogReadResolution(12);
     Serial.begin(115200);
     initializeDisplay();
-    if(!initializeLogfile(CS_PIN)) {
+    if(initializeLogfile(CS_PIN)) {
         // TODO error
+        sdStatus = true;
     }
     pinMode(LOG_TOGGLE_PIN, INPUT_PULLUP);
     // registriert den interrupt handler "toggleSDLogging" für pin 32
@@ -83,5 +85,5 @@ void loop() {
 
     // anzeige der sensordaten auf display
     Serial.println("Displaying...");
-    displaySensorData(dataString, logToSD);
+    displaySensorData(dataString, logToSD, sdStatus);
 }
