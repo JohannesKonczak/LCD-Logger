@@ -4,7 +4,12 @@
 
 bool initializeLogfile(int pin) {
     pinMode(pin, OUTPUT);
-    return SD.begin(pin);
+    bool status = false;
+    do {
+        delay(500);
+        status = SD.begin(pin);
+    } while(!status);
+    return status;
 }
 
 File openFile() {
