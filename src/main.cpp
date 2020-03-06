@@ -70,7 +70,6 @@ void loop() {
     // für jeden messwert
     for(int i = 0; i < 4; i++) {
         dataString[i] = doubleToLogMessage(sensorData[i]);
-        Serial.println(dataString[i]);
     }
 
     // schreiben auf sd karte
@@ -84,6 +83,5 @@ void loop() {
     }
 
     // anzeige der sensordaten auf display
-    Serial.println("Displaying...");
     displaySensorData(dataString, logToSD, sdStatus);
 }
