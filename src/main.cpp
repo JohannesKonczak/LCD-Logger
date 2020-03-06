@@ -46,7 +46,7 @@ void setup() {
     analogReadResolution(12);
     Serial.begin(115200);
     initializeDisplay();
-    if(initializeLogfile(CS_PIN)) {
+    if(initializeLogfile(CS_PIN, Serial)) {
         // TODO error
         sdStatus = true;
     }
