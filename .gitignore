@@ -2,3 +2,4 @@
 CMakeListsPrivate.txt
 .idea/
 cmake-build-esp32doit-devkit-v1/
+cmake-build-debug/
